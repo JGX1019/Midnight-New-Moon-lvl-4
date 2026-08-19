@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "file": "index.js",
+  "sourceRoot": "../../../",
+  "sources": ["contracts/survey.compact"],
+  "names": [],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EAyBA;;;;;;;;;;MAmBA,AAAA,eAQC;;;;;cAR8B,QAAe;;;;;;;;;;;;;;;;;;yCAAf,QAAe;;;;;;;;;iDAAf,QAAe;;;OAQ7C;MAKD,AAAA,YAKC;;;;;;;;;;;;;;;;;;;;;;OAAA;;;;;;;;;;GACA;EAtCD;;;;;;;;;;;;;;;;;;;;;;;;;;;;IAQA;;;;;;;;;yEAAsC;IACtC;;;;;;;;;yEAAsC;;;;;;;GA6BrC;EAnBD,AAAA,kBAQC,4BAR8B,QAAe;4BACrC,QAAM;4BACN,QAAM;UAEb,KAAc;IAAd;;;;;;;;;;6FAAA,KAAc;;;;wEAAA;UAER,aAA0C,GAAnB,QAAM;UACnC,KAAc,GAAa,aAAW;IAAtC;;;;;;;;;;6FAAA,KAAc;;;;wEAAA;;GACf;EAKD,AAAA,eAKC;UAJO,WAAoC,2BAAd;;;;;;;;;;;qHAAc;UACpC,WAAoC,2BAAd;;;;;;;;;;;qHAAc;UAC1C,KAAc;;;;;qBAAa,WAAS;IAApC;;;;;;;;;;6FAAA,KAAc;;;;wEAAA;UACd,KAAc;;;;;qBAAa,WAAS;IAApC;;;;;;;;;;6FAAA,KAAc;;;;wEAAA;;GACf;;;;;;;;;;;;;;;;IA7BD;qCAAA;;;;;;;;;;;0GAAsC;KAAA;IACtC;qCAAA;;;;;;;;;;;0GAAsC;KAAA;;;;;;;;;;"
+}
