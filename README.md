@@ -12,7 +12,7 @@
 
 | Network | Address |
 |---------|---------|
-| Preprod | `[PASTE SURVEY CONTRACT ADDRESS AFTER DEPLOYING]` |
+| Preprod | `dd45fe239a714b690f1ceed214003afe8c76909737420bbe0f84c10c5fc3a6bb` |
 
 ## What This Does
 
