@@ -1,0 +1,63 @@
+/**
+ * survey.compact — Anonymous Feedback Survey
+ *
+ * A satisfaction survey where each participant submits a 1-5 rating.
+ * Participation is publicly verifiable; individual ratings are not.
+ *
+ * PUBLIC (on-chain, visible to anyone):
+ *   - response_count: how many responses have been submitted in total.
+ *     This is what makes participation verifiable — anyone can confirm
+ *     that N people responded.
+ *   - positive_count: how many of those responses were positive (rating >= 4).
+ *     Together with response_count this yields a satisfaction rate.
+ *
+ * PRIVATE (circuit input, never stored on-chain):
+ *   - rating: the participant's exact 1-5 rating. This is a private
+ *     circuit parameter, consumed inside the ZK proof and never written
+ *     to the ledger.
+ *
+ * WHAT THE USER PROVES WITHOUT REVEALING:
+ *   - That their rating is a well-formed survey answer (1 <= rating <= 5),
+ *     so the tallies cannot be poisoned with out-of-range values.
+ *   - That positive_count was incremented if and only if their rating
+ *     was >= 4, without disclosing which of {1,2,3} or which of {4,5}
+ *     they actually chose.
+ */
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// ── Ledger state ─────────────────────────────────────────────────────────────
+// Both counters are PUBLIC. Counter (rather than Cell<Uint<64>>) avoids a
+// read-dependency on the exact current value, reducing transaction conflicts
+// when several people respond at once.
+export ledger response_count: Counter;
+export ledger positive_count: Counter;
+
+// ── Circuit: submit_response ──────────────────────────────────────────────────
+// rating is a PRIVATE circuit parameter supplied by the participant at proof
+// time. The asserts below run inside the proof, so an invalid rating cannot
+// produce a valid proof — validity is enforced without the value being seen.
+//
+// disclose(...) marks exactly what becomes public: the fact that one more
+// response arrived, and one bit of information about whether it was positive.
+// The exact rating is never disclosed.
+export circuit submit_response(rating: Uint<8>): [] {
+  assert(rating >= 1, "rating must be at least 1");
+  assert(rating <= 5, "rating must be at most 5");
+
+  response_count += 1;
+
+  const is_positive: Uint<8> = rating >= 4 ? 1 : 0;
+  positive_count += disclose(is_positive);
+}
+
+// ── Circuit: reset_survey ─────────────────────────────────────────────────────
+// Clears both tallies so a new survey round can start. Reads of the counters
+// are public, so no private input is involved here.
+export circuit reset_survey(): [] {
+  const responses: Uint<64> = response_count;
+  const positives: Uint<64> = positive_count;
+  response_count -= disclose(responses as Uint<16>);
+  positive_count -= disclose(positives as Uint<16>);
+}
