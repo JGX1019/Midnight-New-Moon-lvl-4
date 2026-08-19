@@ -147,16 +147,23 @@ export function SurveyCard({ connectedAPI }: Props) {
 
   if (!deployedContract) {
     return (
-      <section className="card">
-        <h2>Survey</h2>
-        <p className="muted">Deploy a new survey, or join an existing one by address.</p>
+      <section className="section">
+        <div className="section-head">
+          <h2>Survey</h2>
+        </div>
 
         <button onClick={handleDeploy} disabled={busy} className="btn btn-primary btn-block">
-          {txStatus === 'deploying' ? <><span className="spinner" aria-hidden="true" /> Deploying survey...</> : 'Deploy New Survey'}
+          {txStatus === 'deploying' ? (
+            <>
+              <span className="spinner" aria-hidden="true" /> Deploying survey
+            </>
+          ) : (
+            'Deploy New Survey'
+          )}
         </button>
 
         <div className="join-row">
-          <label htmlFor="contract-address">Join an existing survey</label>
+          <label htmlFor="contract-address">Or join an existing survey</label>
           <div className="join-inputs">
             <input
               id="contract-address"
@@ -169,94 +176,135 @@ export function SurveyCard({ connectedAPI }: Props) {
               spellCheck={false}
             />
             <button onClick={handleJoin} disabled={busy} className="btn btn-secondary">
-              {txStatus === 'joining' ? <><span className="spinner" aria-hidden="true" /> Joining...</> : 'Join'}
+              {txStatus === 'joining' ? (
+                <>
+                  <span className="spinner" aria-hidden="true" /> Joining
+                </>
+              ) : (
+                'Join'
+              )}
             </button>
           </div>
         </div>
 
-        {error && <p role="alert" className="error-text">{error}</p>}
+        {error && (
+          <p role="alert" className="error-text">
+            {error}
+          </p>
+        )}
       </section>
     );
   }
 
   return (
-    <section className="card">
-      <h2>Survey</h2>
-
-      <dl className="meta">
-        <dt>Contract</dt>
-        <dd className="mono break" title={contractAddress ?? ''}>{contractAddress}</dd>
-      </dl>
-
-      <div className="tallies">
-        <div className="tally">
-          <span className="tally-value">{tallies ? tallies.responses.toString() : '—'}</span>
-          <span className="tally-label">Responses</span>
+    <>
+      <div className="stats">
+        <div className="stat">
+          <span className="label">Responses</span>
+          <p className="stat-value">{tallies ? tallies.responses.toString() : '—'}</p>
+          <p className="stat-note">Total submitted responses</p>
         </div>
-        <div className="tally">
-          <span className="tally-value">{tallies ? tallies.positives.toString() : '—'}</span>
-          <span className="tally-label">Positive (4-5)</span>
+        <div className="stat">
+          <span className="label">Positive</span>
+          <p className="stat-value">{tallies ? tallies.positives.toString() : '—'}</p>
+          <p className="stat-note">Responses rated 4 or 5</p>
         </div>
-        <div className="tally">
-          <span className="tally-value">{tallies ? satisfactionRate(tallies) : '—'}</span>
-          <span className="tally-label">Satisfaction</span>
+        <div className="stat">
+          <span className="label">Satisfaction</span>
+          <p className="stat-value">{tallies ? satisfactionRate(tallies) : '—'}</p>
+          <p className="stat-note">Positive share of all responses</p>
         </div>
       </div>
 
-      <fieldset className="rating-group" disabled={busy}>
-        <legend>How satisfied are you?</legend>
-        <div className="rating-options" role="radiogroup" aria-label="Your rating">
-          {RATINGS.map((r) => (
+      <section className="section">
+        <div className="section-head">
+          <h2>Submit Response</h2>
+        </div>
+
+        <dl className="meta">
+          <dt>Contract</dt>
+          <dd className="mono break" title={contractAddress ?? ''}>
+            {contractAddress}
+          </dd>
+        </dl>
+
+        <fieldset className="rating-group" disabled={busy} style={{ marginTop: '1.25rem' }}>
+          <legend>How satisfied are you?</legend>
+          <div className="rating-options" role="radiogroup" aria-label="Your rating">
+            {RATINGS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                role="radio"
+                aria-checked={selectedRating === r}
+                aria-label={`${r} — ${RATING_LABELS[r]}`}
+                title={RATING_LABELS[r]}
+                className={`rating-btn${selectedRating === r ? ' is-selected' : ''}`}
+                onClick={() => setSelectedRating(r)}
+                disabled={busy}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <p className="privacy-label">
+            Your rating stays private — it never leaves your browser. Only the tallies above change on-chain.
+          </p>
+        </fieldset>
+
+        <div className="actions">
+          <button
+            onClick={handleSubmit}
+            disabled={busy || selectedRating === null}
+            className="btn btn-primary btn-block"
+          >
+            {txStatus === 'proving' ? (
+              <>
+                <span className="spinner" aria-hidden="true" /> Generating proof locally
+              </>
+            ) : (
+              'Submit Anonymous Response'
+            )}
+          </button>
+          <div className="actions-row">
             <button
-              key={r}
-              type="button"
-              role="radio"
-              aria-checked={selectedRating === r}
-              aria-label={`${r} — ${RATING_LABELS[r]}`}
-              title={RATING_LABELS[r]}
-              className={`rating-btn${selectedRating === r ? ' is-selected' : ''}`}
-              onClick={() => setSelectedRating(r)}
+              onClick={() => contractAddress && refreshTallies(contractAddress)}
               disabled={busy}
+              className="btn btn-secondary"
             >
-              {r}
+              Refresh Tallies
             </button>
-          ))}
+            <button onClick={handleReset} disabled={busy} className="btn btn-secondary">
+              Reset Survey
+            </button>
+          </div>
         </div>
-        <p className="privacy-label">
-          <span aria-hidden="true">🔒</span> Your rating stays private — it never leaves your browser. Only the
-          tallies above change on-chain.
-        </p>
-      </fieldset>
 
-      <div className="actions">
-        <button onClick={handleSubmit} disabled={busy || selectedRating === null} className="btn btn-primary btn-block">
-          {txStatus === 'proving' ? <><span className="spinner" aria-hidden="true" /> Generating proof locally...</> : 'Submit Anonymous Response'}
-        </button>
-        <div className="actions-row">
-          <button onClick={() => contractAddress && refreshTallies(contractAddress)} disabled={busy} className="btn btn-secondary">
-            Refresh Tallies
-          </button>
-          <button onClick={handleReset} disabled={busy} className="btn btn-secondary">
-            Reset Survey
-          </button>
-        </div>
-      </div>
+        {txStatus === 'proving' && (
+          <div className="status status-working" role="status">
+            <p>
+              Building a zero-knowledge proof in your browser. This proves your rating is a valid 1-5 answer without
+              revealing which one it was.
+            </p>
+          </div>
+        )}
 
-      {txStatus === 'proving' && (
-        <p className="status status-working" role="status">
-          Building a zero-knowledge proof in your browser. This proves your rating is a valid 1-5 answer without
-          revealing which one it was.
-        </p>
-      )}
+        {txStatus === 'confirmed' && txId && (
+          <div className="status status-ok" role="status">
+            <span className="badge">Confirmed</span>
+            <p>Response recorded on-chain.</p>
+            <p className="mono break tx-id" title={txId}>
+              tx: {txId}
+            </p>
+          </div>
+        )}
 
-      {txStatus === 'confirmed' && txId && (
-        <div className="status status-ok" role="status">
-          <p>Response recorded on-chain.</p>
-          <p className="mono break tx-id" title={txId}>tx: {txId}</p>
-        </div>
-      )}
-
-      {error && <p role="alert" className="error-text">{error}</p>}
-    </section>
+        {error && (
+          <p role="alert" className="error-text">
+            {error}
+          </p>
+        )}
+      </section>
+    </>
   );
 }
