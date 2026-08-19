@@ -5,3 +5,5 @@ dist
 .midnight-wallet-state/
 midnight-level-db/
 *.log
+
+.DS_Store
