@@ -6,7 +6,7 @@
 
 ## Live Demo
 
-[PASTE LIVE URL AFTER DEPLOYING FRONTEND]
+https://midnight-new-moon-lvl-3.vercel.app/
 
 ## Contract Address
 
