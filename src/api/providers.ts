@@ -22,6 +22,47 @@ const CIRCUIT_IDS = ['submit_response', 'reset_survey'] as const;
 type CircuitId = (typeof CIRCUIT_IDS)[number];
 
 /**
+ * Public Midnight indexer endpoints, keyed by network id.
+ *
+ * We deliberately do NOT use the `indexerUri` returned by the wallet's
+ * getConfiguration(). Some wallets (1AM, for example) point that at their
+ * own hosted indexer, which requires an API key and answers our
+ * unauthenticated queries with 401 Unauthorized. The wallet needs that
+ * endpoint for its own syncing; we only need public contract state, so we
+ * read it from the network's public indexer instead.
+ *
+ * The wallet's networkId is still authoritative — it decides which of
+ * these endpoints we talk to, so a wallet on Preview can't silently read
+ * Preprod state.
+ */
+const PUBLIC_INDEXERS: Record<string, { http: string; ws: string }> = {
+  preprod: {
+    http: 'https://indexer.preprod.midnight.network/api/v4/graphql',
+    ws: 'wss://indexer.preprod.midnight.network/api/v4/graphql/ws',
+  },
+  preview: {
+    http: 'https://indexer.preview.midnight.network/api/v4/graphql',
+    ws: 'wss://indexer.preview.midnight.network/api/v4/graphql/ws',
+  },
+  undeployed: {
+    http: 'http://localhost:8088/api/v4/graphql',
+    ws: 'ws://localhost:8088/api/v4/graphql/ws',
+  },
+};
+
+/**
+ * Picks the indexer to read public contract state from. Prefers the known
+ * public endpoint for the wallet's network; falls back to whatever the
+ * wallet reported if we don't recognise the network id.
+ */
+function resolveIndexer(networkId: string, walletHttp: string, walletWs: string) {
+  const known = PUBLIC_INDEXERS[networkId];
+  if (known) return known;
+  console.warn(`Unknown network id "${networkId}" — falling back to the wallet's indexer endpoint.`);
+  return { http: walletHttp, ws: walletWs };
+}
+
+/**
  * Builds a WalletProvider + MidnightProvider pair backed by the connected
  * Lace wallet's balancing/signing/submission methods, plus a ProofProvider
  * that delegates proof generation to the wallet (proving happens locally
@@ -34,6 +75,8 @@ export async function buildProviders(connectedAPI: ConnectedAPI) {
   // to — set it globally before any contract operation, or midnight-js
   // throws "Network ID has not been configured".
   setNetworkId(config.networkId);
+
+  const indexer = resolveIndexer(config.networkId, config.indexerUri, config.indexerWsUri);
 
   // FetchZkConfigProvider defaults to cross-fetch's `fetch` and calls it as
   // `this.fetchFunc(url, opts)` internally — since `this` there is the
@@ -71,7 +114,7 @@ export async function buildProviders(connectedAPI: ConnectedAPI) {
 
   return {
     privateStateProvider: noopPrivateStateProvider(),
-    publicDataProvider: indexerPublicDataProvider(config.indexerUri, config.indexerWsUri, window.WebSocket as any),
+    publicDataProvider: indexerPublicDataProvider(indexer.http, indexer.ws, window.WebSocket as any),
     zkConfigProvider,
     proofProvider,
     walletProvider: walletAndMidnightProvider,
