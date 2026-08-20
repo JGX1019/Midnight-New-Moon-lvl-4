@@ -110,7 +110,7 @@ See [PROPOSAL.md](./PROPOSAL.md)
 
 ## Demo Video
 
-[PLACEHOLDER — will be added after recording]
+https://www.tella.tv/video/building-anonymous-surveys-on-midnight-ejsu
 
 ## Project Structure
 
