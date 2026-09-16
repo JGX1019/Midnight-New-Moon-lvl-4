@@ -2,32 +2,41 @@
 
 ## What is the product, and who uses it?
 
-An anonymous feedback survey where the results are verifiable but the individual answers are not. Participants answer a satisfaction question with a 1-5 rating, and the contract publishes only two numbers: how many people responded, and how many of those responses were positive.
+Anonymous Verified Reviews — a review platform where only people who actually bought the product can post a review, each buyer can review at most once, and nobody, not the merchant, not another buyer, not a chain observer, can tell which buyer wrote which review.
 
-The users we have in mind are groups where honest feedback and trustworthy numbers are both required, and where the two currently conflict. A DAO surveying contributors about a controversial proposal, a company running an employee engagement survey, or a cohort-based program collecting course feedback. In all three, people soften their answers when they suspect the response can be traced back to them, and the organiser has no way to prove they did not quietly discard the answers they disliked. We fix both ends: the participant knows their exact rating was never recorded anywhere, and everyone can independently verify the tally on-chain.
+The privacy shape here is the inverse of a typical anonymous survey: the review *text and rating* are fully public — a review nobody can read is worthless — but the *author* is not. The hard problem is not concealing content, it's proving someone earned the right to post without ever learning who they are.
+
+Fake reviews are now a legal liability rather than a nuisance. The FTC's Consumer Reviews and Testimonials Rule (16 CFR 465) took effect in October 2024 and carries civil penalties of up to $53,088 per violation, and the FTC began sending warning letters to companies over it in December 2025. Platforms are stuck between two bad options: verify reviewers by tying every review to a real account and purchase record, which means the platform permanently holds who said what about whom, or allow anonymity and get flooded with paid and AI-generated fakes.
+
+Our first users are small and mid-size e-commerce merchants who want a review section they can point to as genuinely unmanipulated, and marketplaces/platforms that want to offer "verified purchase, anonymous author" as a feature rather than a false claim. A reader gets a review they can trust came from a real buyer. A reviewer gets to say the product was bad without the merchant ever learning who complained — which is exactly why honest negative reviews are so rare today.
 
 ## Why Midnight specifically?
 
-On a transparent chain the survey answer has to be readable to be counted, so "anonymous" reduces to hoping nobody links the wallet to the person. Hashing the rating does not help either — there are only five possible answers, so anyone can hash all five and match. The usual escape is to let a trusted server collect responses and publish the totals, which just moves the problem: now you are trusting the organiser not to drop inconvenient answers, and the verifiability is gone.
+On a transparent chain, the review author has no way to hide, because proving "I bought this" via any public record ties straight back to the buyer's wallet or account. The usual workaround — a platform that verifies purchases internally and publishes an "anonymized" review — just relocates the trust problem: now you're trusting the platform not to leak or misuse the purchase-to-author link it necessarily holds, and there's no way for anyone outside the platform to verify that link was ever actually severed.
 
-Midnight lets us keep both properties at once. The rating is a private circuit input, so it is consumed while the proof is built on the participant's machine and never leaves it. The proof still enforces that the rating is a well-formed answer between 1 and 5, so the tally cannot be poisoned with junk, and it enforces that the positive counter moved if and only if the rating was 4 or 5. The chain verifies all of that without ever seeing the number.
+Midnight lets us avoid holding that link at all. A buyer's purchase is recorded as a one-way commitment to a secret only they know, published in a Merkle tree. To review, they prove in zero knowledge that their commitment is somewhere in that tree — without revealing which leaf — and prove they haven't used this specific purchase to review before, via a nullifier that's deterministic per purchase but reveals nothing about which purchase produced it. The chain verifies both without ever learning the buyer's identity or which purchase is theirs. There's no database anywhere, including ours, capable of answering "who wrote this review."
 
 ## Data Model
 
 | Data Point | Type | Disclosed To |
 |------------|------|--------------|
-| `response_count` — total responses submitted | Public ledger (Counter) | Everyone |
-| `positive_count` — responses rated 4-5 | Public ledger (Counter) | Everyone |
-| `rating` — the participant's exact 1-5 answer | Private witness (circuit input) | No one |
-| Satisfaction rate — derived from the two counters | Derived public | Everyone |
-| ZK proof of a valid response | ZK proof | Chain (verifies without reading the rating) |
+| `merchantKey` — the merchant's public key | Public ledger | Everyone |
+| `purchases` — Merkle tree of purchase commitments | Public ledger (root + leaf count) | Everyone (root/count only — not which leaf is which buyer) |
+| Buyer's secret | Private witness | No one |
+| Buyer's Merkle path (which leaf is theirs) | Private witness | No one |
+| `purchaseCount` / `reviewCount` | Public ledger (Counter) | Everyone |
+| `spentNullifiers` — one per reviewed purchase | Public ledger (Set) | Everyone (opaque hashes, not linkable to a purchase) |
+| Review text and star rating | Public ledger (Map) | Everyone — this is the product |
+| ZK proof of valid membership + unused nullifier | ZK proof | Chain (verifies without reading the secret or path) |
 
 ## Mainnet Feasibility
 
-Yes, with a handful of gaps to close first — none of them research problems, all of them normal productization work.
+Realistic, with a specific and known list of gaps between this MVP and something a real merchant would run — none of them research problems.
 
-The main one is the per-transaction leak. Because the counters update once per response, someone watching individual transactions learns one bit about that response: whether it was positive. Exact ratings stay hidden, but that bit is more than we want to give away. The fix is to stop writing one response per transaction — batch them, or aggregate before settling — which is a design change rather than a new primitive.
+The most important is out-of-band commitment delivery. Right now a buyer generates a commitment and has to hand it to the merchant somehow (paste it at checkout, email it, etc.), which is fine for a demo and clumsy for production. The real version needs this wired into an actual checkout flow, so the commitment is captured automatically at the moment of purchase.
 
-The second is that a survey needs to be a real object rather than a single global pair of counters. That means multiple concurrent surveys with owners, an open/closed state so results are only meaningful once, and a nullifier so one participant cannot answer twice. Nullifiers are the interesting piece here, since doing it without re-identifying people is exactly the kind of thing Compact's private state is for.
+Second is the anonymity-set caveat documented in the README: with very few recorded purchases, "some purchase was reviewed" barely hides anything. This isn't fixable by better cryptography — it's fixed by scale, the same way every mixnet and anonymous-credential system needs a large enough crowd to hide in. Worth stating plainly rather than glossing over.
 
-Last is UX. Requiring a local Docker proof server is fine for a demo and unacceptable for someone filling in a survey link. Wallet-side or hosted proving needs to be the default path before this goes in front of ordinary participants.
+Third, `ownPublicKey()`'s guarantee for "only the merchant can record purchases" is prover-side, not a wallet-signature check at the protocol level — sufficient for this MVP, but a production version serving a real business should layer a stronger authorization check (e.g. verified against a registered merchant list held by a marketplace contract) rather than trusting any prover who successfully calls `initMerchant` first.
+
+Last, same as every level before this one: proof generation currently needs a local Docker proof server, which is fine for a merchant's own dashboard and unacceptable for an ordinary buyer leaving a review from a link. Wallet-side or hosted proving needs to be the default path before this goes in front of real customers.
