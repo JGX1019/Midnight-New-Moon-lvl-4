@@ -43,6 +43,11 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           compact --version
 
+      - name: Compile review contract
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          compact compile contracts/review.compact managed/review
+
       - name: Compile survey contract
         run: |
           export PATH="$HOME/.local/bin:$PATH"
