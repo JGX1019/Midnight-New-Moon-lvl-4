@@ -1,0 +1,180 @@
+/**
+ * review.compact — Anonymous Verified Reviews
+ *
+ * A review platform where only people who actually bought the product can
+ * post a review, each buyer can review at most once, and nobody — not the
+ * merchant, not another buyer, not a chain observer — can tell which buyer
+ * wrote which review.
+ *
+ * The privacy shape here is the inverse of a typical anonymous survey: the
+ * review TEXT and RATING are fully public (a review nobody can read is
+ * worthless), but the AUTHOR is not. The hard problem is not concealing
+ * content, it's proving someone earned the right to post without ever
+ * learning who they are.
+ *
+ * PUBLIC (on-chain, visible to anyone):
+ *   - merchantKey: the public key that is allowed to record purchases.
+ *   - initialized: whether the merchant key has been set.
+ *   - purchases: a Merkle tree of purchase commitments. Anyone can see the
+ *     tree's root and how many leaves it has — nobody can tell which
+ *     commitment belongs to which real buyer.
+ *   - purchaseCount / reviewCount: how many purchases were recorded and how
+ *     many reviews were posted. Lets anyone sanity-check the review count
+ *     against the purchase count (reviewCount can never exceed
+ *     purchaseCount, since each review consumes one nullifier).
+ *   - reviews / ratings: the review text and 1-5 rating for every posted
+ *     review, keyed by an incrementing id. This is the actual product —
+ *     fully public, fully readable, by design.
+ *   - spentNullifiers: the set of nullifiers already used. Public so the
+ *     contract itself (and anyone auditing it) can verify "one purchase,
+ *     one review" is actually being enforced, without learning who any
+ *     nullifier belongs to.
+ *
+ * PRIVATE (witness, never stored on-chain):
+ *   - userSecret: a buyer's own secret, generated on their device and never
+ *     shared with the merchant or anyone else. Only a hash of it (the
+ *     purchase commitment) is ever made public, and only by the merchant
+ *     at purchase time — the buyer never has to prove anything to get that
+ *     commitment recorded, they can even generate it before their secret
+ *     exists to them in any meaningful sense (e.g. it can be derived from
+ *     a fixed local value).
+ *   - userPath: the Merkle path proving the buyer's own commitment sits in
+ *     the published purchases tree, fetched from public ledger state via
+ *     purchases.findPathForLeaf(...) — no private index needs to be
+ *     remembered separately.
+ *
+ * WHAT THE USER PROVES WITHOUT REVEALING:
+ *   - That they hold a genuine purchase commitment somewhere in the
+ *     published set, WITHOUT revealing which leaf is theirs. The circuit
+ *     re-derives the expected commitment from their own secret and checks
+ *     it against the path's leaf, so nobody can borrow another buyer's
+ *     already-public commitment and forge a membership proof for it.
+ *   - That they have not reviewed before, via a nullifier derived from
+ *     their own secret. The nullifier is deterministic per buyer per
+ *     product (so a second attempt is rejected) but reveals nothing about
+ *     which purchase commitment produced it.
+ *   - The buyer's identity — beyond "some genuine purchaser" — is never
+ *     disclosed at any point. The merchant learns a purchase happened and,
+ *     separately, that a review was posted; it cannot link the two.
+ *
+ * HONEST LIMITS (see README "Privacy Claim" for the full discussion):
+ *   - The submitting wallet address is still visible on-chain, exactly as
+ *     with the Level 3 survey. The Merkle proof hides WHICH purchase is
+ *     yours; it does not hide which wallet sent this transaction. A buyer
+ *     who wants unlinkability from their everyday wallet should submit
+ *     from a fresh one.
+ *   - ownPublicKey() in initMerchant/recordPurchase is a value the PROVER
+ *     supplies when building their own proof, not something checked
+ *     against a signature at the protocol level. Any prover claiming to be
+ *     the merchant is, for this contract's purposes, the merchant.
+ */
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// ── Ledger state ─────────────────────────────────────────────────────────────
+
+// The merchant's public key, captured once at initMerchant time. PUBLIC —
+// anyone can see who is allowed to record purchases for this contract.
+export ledger merchantKey: Bytes<32>;
+
+// Whether initMerchant has already run. Prevents a second caller from
+// silently taking over as "the merchant" after the fact.
+export ledger initialized: Boolean;
+
+// The set of purchase commitments, as a Merkle tree. Depth 10 supports up
+// to 1024 recorded purchases per contract instance — plenty for an MVP,
+// and each product/merchant deployment gets its own tree.
+export ledger purchases: MerkleTree<10, Bytes<32>>;
+
+// PUBLIC counters. Counter (not Cell<Uint<64>>) avoids a read-dependency on
+// the exact current value, which matters once real buyers are submitting
+// concurrently.
+export ledger purchaseCount: Counter;
+export ledger reviewCount: Counter;
+
+// Nullifiers already spent — one purchase commitment can produce exactly
+// one valid nullifier, so this set enforces "one review per purchase"
+// without ever recording which purchase it was.
+export ledger spentNullifiers: Set<Bytes<32>>;
+
+// The actual reviews. Both maps are keyed by the same incrementing id, and
+// both are fully PUBLIC — this is the product, meant to be read.
+export ledger reviews: Map<Uint<32>, Opaque<"string">>;
+export ledger ratings: Map<Uint<32>, Uint<8>>;
+
+// ── Witnesses (private inputs) ────────────────────────────────────────────
+
+// The buyer's own secret. Generated and kept entirely on their device.
+witness userSecret(): Bytes<32>;
+
+// The Merkle path proving inclusion of the buyer's own commitment. Fetched
+// from public ledger state via purchases.findPathForLeaf(commitment) —
+// the frontend derives `commitment` itself with the commitmentOf pure
+// circuit below, so no separate private bookkeeping is required.
+witness userPath(): MerkleTreePath<10, Bytes<32>>;
+
+// ── Pure circuit: commitmentOf ────────────────────────────────────────────
+// Exposed to the frontend via pureCircuits so it can compute the exact same
+// commitment the contract expects, without reimplementing the hash in JS.
+// Domain-separated with "purchase-v1" so this hash can never collide with
+// the nullifier hash below, even for the same secret.
+export pure circuit commitmentOf(secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([secret, pad(32, "purchase-v1")]);
+}
+
+// ── Circuit: initMerchant ──────────────────────────────────────────────────
+// Whoever calls this first becomes "the merchant" for this contract
+// instance. Can only run once — see HONEST LIMITS above regarding what
+// ownPublicKey() actually guarantees.
+export circuit initMerchant(): [] {
+  assert(!initialized, "already initialized");
+  merchantKey = disclose(ownPublicKey().bytes);
+  initialized = true;
+}
+
+// ── Circuit: recordPurchase ─────────────────────────────────────────────────
+// Only the merchant can call this. buyerCommitment is a value the merchant
+// received from the buyer out of band (e.g. shown at checkout) and is
+// PUBLIC the moment it's recorded — that's fine, because on its own it
+// reveals nothing about which real buyer it corresponds to.
+export circuit recordPurchase(buyerCommitment: Bytes<32>): [] {
+  assert(initialized, "not initialized");
+  assert(ownPublicKey().bytes == merchantKey, "only the merchant can record purchases");
+  purchases.insert(disclose(buyerCommitment));
+  purchaseCount.increment(1);
+}
+
+// ── Circuit: submitReview ───────────────────────────────────────────────────
+// reviewText and rating are PUBLIC by design — the whole point of a review
+// is that it's readable. What stays hidden is which purchase (and by
+// extension, which buyer) produced it.
+export circuit submitReview(reviewText: Opaque<"string">, rating: Uint<8>): [] {
+  const secret = userSecret();
+  const path = userPath();
+
+  assert(rating >= 1, "rating must be at least 1");
+  assert(rating <= 5, "rating must be at most 5");
+
+  // Bind the Merkle leaf to OUR OWN secret, not an arbitrary public value.
+  // Without this check, anyone could copy another buyer's already-public
+  // commitment (disclosed in recordPurchase) as path.leaf and forge a
+  // membership proof without ever knowing that buyer's secret.
+  const expectedCommitment = persistentHash<Vector<2, Bytes<32>>>([secret, pad(32, "purchase-v1")]);
+  assert(path.leaf == expectedCommitment, "path does not match your purchase commitment");
+
+  // Prove that commitment is genuinely in the published purchases tree,
+  // without disclosing which leaf index it occupies.
+  assert(purchases.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))), "not a verified purchase");
+
+  // One purchase, one review: domain-separated from the commitment hash so
+  // the two can never collide for the same secret.
+  const nullifier = disclose(persistentHash<Vector<2, Bytes<32>>>([secret, pad(32, "review-v1")]));
+  assert(!spentNullifiers.member(nullifier), "this purchase has already been reviewed");
+  spentNullifiers.insert(nullifier);
+
+  const id = reviewCount as Uint<32>;
+  reviews.insert(id, disclose(reviewText));
+  ratings.insert(id, disclose(rating));
+  reviewCount.increment(1);
+}
