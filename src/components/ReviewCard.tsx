@@ -114,6 +114,7 @@ export function ReviewCard({ connectedAPI }: Props) {
   const [selectedCommitment, setSelectedCommitment] = useState<string | null>(null);
   const [reviewText, setReviewText] = useState('');
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
+  const [copiedHex, setCopiedHex] = useState<string | null>(null);
 
   const busy = txStatus === 'deploying' || txStatus === 'joining' || txStatus === 'working';
 
@@ -182,6 +183,28 @@ export function ReviewCard({ connectedAPI }: Props) {
     setCodes(updated);
     saveCodes(contractAddress, updated);
     setSelectedCommitment(next.commitmentHex);
+  };
+
+  const handleCopyCommitment = async (hex: string) => {
+    try {
+      await navigator.clipboard.writeText(hex);
+    } catch {
+      // Clipboard API can fail on insecure origins or without permission —
+      // fall back to a manual-select approach via a temporary textarea.
+      const textarea = document.createElement('textarea');
+      textarea.value = hex;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+    setCopiedHex(hex);
+    setTimeout(() => setCopiedHex((current) => (current === hex ? null : current)), 2000);
   };
 
   const handleRecordPurchase = async () => {
@@ -392,9 +415,39 @@ export function ReviewCard({ connectedAPI }: Props) {
                 {codes.map((c) => (
                   <div key={c.commitmentHex} className={`code-row${c.reviewed ? ' is-reviewed' : ''}`}>
                     <span className="mono break code-hex" title={c.commitmentHex}>
-                      {c.commitmentHex.slice(0, 16)}...
+                      {c.commitmentHex}
                     </span>
-                    <span className="code-status">{c.reviewed ? 'Reviewed' : 'Give this to the merchant'}</span>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={() => handleCopyCommitment(c.commitmentHex)}
+                      title="Copy commitment to clipboard"
+                      aria-label="Copy commitment to clipboard"
+                    >
+                      {copiedHex === c.commitmentHex ? (
+                        <span className="copy-check" aria-hidden="true">
+                          ✓
+                        </span>
+                      ) : (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <rect x="9" y="9" width="13" height="13" rx="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                      )}
+                    </button>
+                    <span className="code-status">
+                      {copiedHex === c.commitmentHex ? 'Copied!' : c.reviewed ? 'Reviewed' : 'Give this to the merchant'}
+                    </span>
                     {!c.reviewed && (
                       <button
                         className="btn btn-secondary btn-small"
