@@ -18,7 +18,7 @@ import * as ledger from '@midnight-ntwrk/ledger-v8';
 import type { MidnightProvider, WalletProvider } from '@midnight-ntwrk/midnight-js-types';
 import { fromHex, toHex } from '@midnight-ntwrk/midnight-js-utils';
 
-const CIRCUIT_IDS = ['submit_response', 'reset_survey'] as const;
+const CIRCUIT_IDS = ['initMerchant', 'recordPurchase', 'submitReview'] as const;
 type CircuitId = (typeof CIRCUIT_IDS)[number];
 
 /**
@@ -84,7 +84,7 @@ export async function buildProviders(connectedAPI: ConnectedAPI) {
   // "Illegal invocation" (native fetch requires `window`/`self` as its
   // receiver). Passing a pre-bound window.fetch avoids that entirely.
   const zkConfigProvider = new FetchZkConfigProvider<CircuitId>(
-    `${window.location.origin}/managed/survey`,
+    `${window.location.origin}/managed/review`,
     window.fetch.bind(window),
   );
 

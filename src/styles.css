@@ -603,3 +603,162 @@ body {
     flex-direction: column;
   }
 }
+
+/* ── Tabs (buyer / merchant) ─────────────────────────────── */
+
+.tabs {
+  display: flex;
+  border: 1px solid var(--border-strong);
+  margin-top: 1.25rem;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 0.65rem 0.75rem;
+  background: var(--surface);
+  color: var(--muted);
+  border: none;
+  border-right: 1px solid var(--border-strong);
+  font-family: var(--mono);
+  font-size: var(--label);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab-btn:last-child {
+  border-right: none;
+}
+
+.tab-btn:hover {
+  background: var(--surface-sunken);
+}
+
+.tab-btn.is-active {
+  background: var(--text);
+  color: #fff;
+}
+
+.tab-panel {
+  margin-top: 1.25rem;
+}
+
+.join-row-label {
+  display: block;
+  font-size: var(--label);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+/* ── Purchase codes list (buyer panel) ──────────────────────── */
+
+.codes-list {
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+}
+
+.code-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.code-row:last-child {
+  border-bottom: none;
+}
+
+.code-row.is-reviewed {
+  opacity: 0.55;
+}
+
+.code-hex {
+  font-size: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.code-status {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.btn-small {
+  padding: 0.35rem 0.6rem;
+  min-height: auto;
+  font-size: 0.65rem;
+}
+
+.review-form {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* ── Public reviews list ────────────────────────────────────── */
+
+.reviews-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.review-item {
+  border: 1px solid var(--border);
+  padding: 0.9rem 1rem;
+}
+
+.review-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+}
+
+.review-rating {
+  color: var(--accent-dark);
+  letter-spacing: 0.05em;
+}
+
+.review-text {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+@media (max-width: 40rem) {
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tab-btn {
+    border-right: none;
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  .tab-btn:last-child {
+    border-bottom: none;
+  }
+
+  .code-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

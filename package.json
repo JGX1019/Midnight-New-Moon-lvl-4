@@ -1,18 +1,17 @@
 {
-  "name": "midnight-anonymous-survey",
+  "name": "midnight-anonymous-verified-reviews",
   "version": "1.0.0",
-  "description": "Anonymous feedback survey dApp on Midnight — verifiable participation, private responses (Level 3 Builder Challenge)",
+  "description": "Anonymous verified reviews dApp on Midnight — prove you bought it, review once, stay anonymous (Level 4 Builder Challenge)",
   "type": "module",
   "scripts": {
-    "compile": "npm run compile:survey && npm run compile:counter",
+    "compile": "npm run compile:review && npm run compile:survey && npm run compile:counter",
+    "compile:review": "compact compile contracts/review.compact managed/review",
     "compile:survey": "compact compile contracts/survey.compact managed/survey",
     "compile:counter": "compact compile contracts/counter.compact managed/counter",
-    "copy-assets": "mkdir -p public/managed/survey/keys public/managed/survey/zkir && cp managed/survey/keys/* public/managed/survey/keys/ && cp managed/survey/zkir/* public/managed/survey/zkir/ && cp managed/survey/contract/index.js src/contract/survey.js && cp managed/survey/contract/index.d.ts src/contract/survey.d.ts",
+    "copy-assets": "mkdir -p public/managed/review/keys public/managed/review/zkir && cp managed/review/keys/* public/managed/review/keys/ && cp managed/review/zkir/* public/managed/review/zkir/ && cp managed/review/contract/index.js src/contract/review.js && cp managed/review/contract/index.d.ts src/contract/review.d.ts",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy:preprod": "npx tsx src/deploy.ts --network preprod",
-    "deploy:preview": "npx tsx src/deploy.ts --network preview",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/",
     "test:run": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/ --forceExit"
   },
