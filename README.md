@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/anony-reviews.png" alt="Anonymous Verified Reviews logo" width="120" />
+</p>
+
 # Anonymous Verified Reviews
 
 ![CI](https://github.com/JGX1019/Midnight-New-Moon-lvl-4/actions/workflows/ci.yml/badge.svg)
@@ -117,7 +121,7 @@ See [docs/USAGE.md](./docs/USAGE.md) for a step-by-step guide covering both the 
 
 ## Product X Profile
 
-[PLACEHOLDER — I will add after creating the account]
+[@AnonyReviews_](https://x.com/AnonyReviews_)
 
 ## Demo Video
 

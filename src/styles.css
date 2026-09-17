@@ -97,6 +97,18 @@ body {
   flex: none;
 }
 
+.brand-logo {
+  width: 1.6rem;
+  height: 1.6rem;
+  object-fit: contain;
+  flex: none;
+  /* The logo art is dark charcoal on transparent; sits on the dark topbar,
+     so a white rounded plate keeps it legible. */
+  background: #fff;
+  border-radius: 6px;
+  padding: 2px;
+}
+
 .topbar-meta {
   display: flex;
   align-items: center;

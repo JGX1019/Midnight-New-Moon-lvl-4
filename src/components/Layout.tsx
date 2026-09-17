@@ -18,9 +18,7 @@ export function Layout({ children, wallet }: Props) {
     <>
       <header className="topbar">
         <h1 className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            ◔
-          </span>
+          <img src="/anony-reviews.png" alt="" className="brand-logo" aria-hidden="true" />
           Anonymous Verified Reviews
         </h1>
 
