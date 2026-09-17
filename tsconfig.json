@@ -14,5 +14,5 @@
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/App.tsx", "src/main.tsx", "src/vite-env.d.ts", "src/components", "src/hooks", "src/api", "src/contract"]
+  "include": ["src/App.tsx", "src/main.tsx", "src/vite-env.d.ts", "src/components", "src/hooks", "src/utils", "src/contract"]
 }

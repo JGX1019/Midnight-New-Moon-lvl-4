@@ -21,8 +21,14 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      # npm ci installs exactly what's in package-lock.json and fails loudly
+      # if package.json and the lockfile have drifted apart, instead of
+      # silently re-resolving semver ranges to newer versions the way
+      # `npm install` can. That drift previously caused compact-runtime to
+      # resolve to a newer, API-incompatible version in CI while the local
+      # node_modules stayed on the older one.
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
 
       - name: Install Compact compiler
         run: |
