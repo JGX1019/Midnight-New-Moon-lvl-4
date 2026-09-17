@@ -6,13 +6,13 @@
 
 ## Live Demo
 
-[PASTE LIVE URL AFTER DEPLOYING FRONTEND]
+https://anony-reviews.vercel.app/
 
 ## Contract Address
 
 | Network | Address |
 |---------|---------|
-| Preprod | `[ADDRESS — PASTE AFTER DEPLOYING FROM THE FRONTEND]` |
+| Preprod | `57aae04d05e8e0697046ee8c28c15689997c3a0c9f67ef6086924a55d765f30c` |
 
 ## What This Product Does
 
