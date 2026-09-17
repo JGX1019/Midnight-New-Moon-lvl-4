@@ -39,10 +39,19 @@ jobs:
       # Not optional: the installer script only fetches the CLI wrapper, not the
       # toolchain binary itself. Without `compact update`, every subsequent
       # `compact compile` fails with "No default compiler set".
+      #
+      # PINNED to 0.31.1 deliberately. A bare `compact update` fetches the
+      # LATEST toolchain, and newer toolchains generate contract bindings
+      # whose initialState()/circuit calls are async (return Promises). The
+      # committed managed/ output and the tests are written against the
+      # 0.31.1 sync shape, so an unpinned toolchain regenerates async
+      # bindings in CI and every test file fails to typecheck with
+      # "Property does not exist on type Promise<...>. Did you forget to use
+      # 'await'?". Keep this matched to the local toolchain version.
       - name: Download Compact toolchain
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          compact update
+          compact update 0.31.1
 
       - name: Verify Compact version
         run: |
